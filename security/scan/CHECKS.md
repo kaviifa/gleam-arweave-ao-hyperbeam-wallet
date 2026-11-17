@@ -253,6 +253,12 @@ before it is a finding.
 - `eval`, `new Function`, or a dynamic `import()` with a computed path.
 - `console.*` calls that can print a key, a password or a decrypted
   value.
+- Numeric guards that parse their input: `Number()` of a non-numeric
+  string is `NaN`, and every comparison with `NaN` is false, so a guard
+  written as `Number(x) > LIMIT` lets a non-number through. Check the
+  guard still holds — or the input is validated as numeric first —
+  wherever a size, count or limit gates a download, an allocation or a
+  loop.
 - Manifest permissions the code doesn't use.
 - Plain `http://` URLs outside loopback and tests.
 
@@ -263,6 +269,16 @@ git grep -nE '__proto__|Object\.assign|dangerouslySetInnerHTML|javascript:|onMes
 ```
 
 It prints about 50 lines.
+
+This one finds numeric guards that parse their input:
+
+```bash
+git grep -nE 'Number\([^)]*\)\s*[<>]' -- '*.ts' '*.tsx' ':!*.test.ts' ':!*.test.tsx'
+```
+
+It prints a couple of lines. Each hit still needs its trace: a guard
+that fails closed on `NaN` (rejecting the input) is fine; one that fails
+open (letting it through) is a lead.
 
 ## 5. What the tests don't test
 
