@@ -911,6 +911,22 @@ describe("WalletLifecycleHandler: Argon2id envelope upgrade on unlock", () => {
     const [wallet] = await storedWallets();
     expect(wallet!.encryptedKeyfile).toMatchObject({ version: 2, ...raised });
   });
+
+  it("gives a new wallet the raised cost, not an outdated envelope's", async () => {
+    await handler.createWallet({ name: "Main", password: GOOD_PASSWORD });
+    await handler.lockWallet();
+    const raised = { memoryKiB: 128, iterations: 2, parallelism: 1 };
+
+    // No unlock: the stored envelope stays outdated, so the import must
+    // refuse its params rather than inherit them.
+    const raisedHandler = new WalletLifecycleHandler(storage, keySession, { kdfParams: raised });
+    await raisedHandler.importWallet({ jwk: validJWK(), name: "Second", password: GOOD_PASSWORD });
+
+    const [first, second] = await storedWallets();
+    expect(first!.encryptedKeyfile).toMatchObject({ version: 2, ...TEST_KDF.kdfParams });
+    expect(second!.encryptedKeyfile).toMatchObject({ version: 2, ...raised });
+    expect(second!.encryptedKeyfile!.salt).not.toBe(first!.encryptedKeyfile!.salt);
+  });
 });
 
 describe("WalletLifecycleHandler: key derivation failures", () => {
