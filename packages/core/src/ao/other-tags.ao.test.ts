@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { otherTags } from "./other-tags";
+import { HARMLESS_TAGS, isHarmlessTag, otherTags } from "./other-tags";
 import { readAoTransferMessage } from "./transfer-message";
 import { readL1TokenTransfer } from "./l1-transfer";
 
@@ -42,6 +42,18 @@ describe("otherTags", () => {
   it("counts Assign-To beside an AO transfer", () => {
     const tags = [...aoTransfer, { name: "Assign-To", value: "q".repeat(43) }];
     expect(otherTags(tags, "ao").map((tag) => tag.name)).toEqual(["Assign-To"]);
+  });
+
+  it("never treats a tag name the readers act on as harmless", () => {
+    // `HARMLESS_TAGS` is keyed by lowercase name, and `isHarmlessTag`
+    // lowercases before it looks up, so a reader-known name here would
+    // make the tag vanish from the count beside a transfer's headline
+    // and from the tiers — the one place a token-moving tag must show.
+    for (const name of ["action", "recipient", "quantity", "assign-to"]) {
+      expect(Object.hasOwn(HARMLESS_TAGS, name)).toBe(false);
+      expect(isHarmlessTag({ name, value: "x" })).toBe(false);
+      expect(isHarmlessTag({ name: name.toUpperCase(), value: "x" })).toBe(false);
+    }
   });
 
   it("never lets a recased or repeated transfer tag read as clean", () => {
